@@ -1,32 +1,46 @@
 import streamlit as st
 from emojify import emojify_text
 
-# Set title for the web app
+# Set page config for better appearance
+st.set_page_config(page_title="Emojify Me 2.0", page_icon="😊", layout="wide")
+
+# Set title and header
 st.title("Emojify Me 2.0 - Context-Aware Emoji Bot")
-st.sidebar.header("Settings")
+st.markdown("Transform your text with mood-based emojis! 🎉")
 
-# Mood selection
-mood = st.sidebar.selectbox("Select Mood:", ["default", "funny", "sarcastic", "motivational", "cute", "excited"])
+# Sidebar settings
+with st.sidebar:
+    st.header("Settings")
+    mood = st.selectbox("Select Mood:", ["default", "funny", "sarcastic", "motivational", "cute", "excited"])
+    option = st.radio("Select Input Method", ["Text Input", "File Upload"])
 
-# User input options
-option = st.sidebar.radio("Select Option", ["Text Input", "File Upload"])
-
+# Main content
 if option == "Text Input":
-    # User types a sentence
-    input_text = st.text_area("Enter your text", "Type something here...")
-
-    if st.button("Emojify"):
-        emojified_text = emojify_text(input_text, mood=mood)
-        st.write("Emojified Text:")
-        st.write(emojified_text)
+    input_text = st.text_area("Enter your text", placeholder="Type your text here...", height=200)
+    
+    if st.button("Emojify", key="text_emojify"):
+        if input_text.strip():
+            try:
+                emojified_text = emojify_text(input_text, mood=mood)
+                st.subheader("Emojified Result:")
+                st.markdown(emojified_text)
+            except Exception as e:
+                st.error(f"Error processing text: {str(e)}")
+        else:
+            st.warning("Please enter some text to emojify!")
 
 elif option == "File Upload":
-    # File upload
-    uploaded_file = st.file_uploader("Choose a text file", type=["txt"])
-
+    uploaded_file = st.file_uploader("Choose a text file", type=["txt"], accept_multiple_files=False)
+    
     if uploaded_file is not None:
-        text = uploaded_file.read().decode("utf-8")
-        if st.button("Emojify File"):
-            emojified_text = emojify_text(text, mood=mood)
-            st.write("Emojified Text:")
-            st.write(emojified_text)
+        try:
+            text = uploaded_file.read().decode("utf-8")
+            if st.button("Emojify File", key="file_emojify"):
+                if text.strip():
+                    emojified_text = emojify_text(text, mood=mood)
+                    st.subheader("Emojified Result:")
+                    st.markdown(emojified_text)
+                else:
+                    st.warning("The uploaded file is empty!")
+        except Exception as e:
+            st.error(f"Error processing file: {str(e)}")

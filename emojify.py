@@ -1,94 +1,84 @@
 import nltk
 from textblob import TextBlob
-import streamlit as st
+import re
 
-# Ensure necessary NLTK data is downloaded
-nltk.download("punkt")
+# Download required NLTK data
+try:
+    nltk.download("punkt", quiet=True)
+except Exception as e:
+    print(f"Error downloading NLTK data: {str(e)}")
 
-# Enhanced Emoji Dictionary with More Keywords and Moods
+# Enhanced Emoji Dictionary
 emoji_dict = {
     "happy": {"default": "😊", "funny": "😂", "sarcastic": "🙄", "motivational": "💪", "cute": "🥰", "excited": "😆"},
-    "sad": {"default": "😢", "funny": "😭", "sarcastic": "😑", "motivational": "😔", "cute": "😞", "angry": "😠"},
-    "love": {"default": "❤️", "funny": "💔", "sarcastic": "💘", "motivational": "💖", "cute": "😍", "affection": "😘"},
-    "angry": {"default": "😠", "funny": "🤬", "sarcastic": "😤", "motivational": "🔥", "cute": "😡", "frustrated": "😡"},
-    "excited": {"default": "😆", "funny": "😜", "sarcastic": "😏", "motivational": "🙌", "cute": "🤩", "super": "🥳"},
-    "tired": {"default": "😩", "funny": "😴", "sarcastic": "😑", "motivational": "😓", "cute": "🥱", "exhausted": "🛌"},
-    "study": {"default": "📚", "funny": "👨‍💻", "sarcastic": "📝", "motivational": "📖", "cute": "📚", "focused": "💡"},
-    "exam": {"default": "📝", "funny": "🤯", "sarcastic": "😴", "motivational": "🔪", "cute": "📅", "stress": "😰"},
-    "free": {"default": "🎉", "funny": "🕺", "sarcastic": "😌", "motivational": "💃", "cute": "🎊", "relaxed": "🌞"},
-    "confused": {"default": "😕", "funny": "😵", "sarcastic": "🤷‍♂️", "motivational": "🤔", "cute": "🙄", "baffled": "🌀"},
-    "sleep": {"default": "😴", "funny": "💀", "sarcastic": "🛌", "motivational": "💭", "cute": "😪", "dreaming": "🌙"},
-    "bored": {"default": "🥱", "funny": "😑", "sarcastic": "🙃", "motivational": "🕰️", "cute": "🌀", "restless": "🛋️"},
-    "coffee": {"default": "☕", "funny": "🍵", "sarcastic": "🥤", "motivational": "🔥", "cute": "☕️", "energized": "💪"},
-    "food": {"default": "🍲", "funny": "🍕", "sarcastic": "🍔", "motivational": "🥗", "cute": "🍩", "hungry": "🍔"},
-    "music": {"default": "🎶", "funny": "🎧", "sarcastic": "🎼", "motivational": "🎸", "cute": "🎤", "relaxing": "🎶"},
-    "dance": {"default": "💃", "funny": "🕺", "sarcastic": "💁‍♀️", "motivational": "💪", "cute": "🕺", "party": "💃"},
-    "assignment": {"default": "📄", "funny": "📝", "sarcastic": "🧾", "motivational": "🏆", "cute": "📚", "study": "📚"},
-    "deadline": {"default": "⏰", "funny": "⌛", "sarcastic": "⏳", "motivational": "⏱️", "cute": "⏰", "pressure": "⚡"},
-    "friends": {"default": "👯", "funny": "👯‍♂️", "sarcastic": "🤔", "motivational": "👫", "cute": "👬", "bestie": "👭"},
-    "success": {"default": "🏆", "funny": "🎉", "sarcastic": "🥳", "motivational": "💯", "cute": "💎", "achieved": "🥇"},
-    "thankful": {"default": "🙏", "funny": "💁‍♀️", "sarcastic": "🙄", "motivational": "👏", "cute": "❤️", "grateful": "🦋"},
-    "party": {"default": "🎉", "funny": "🎈", "sarcastic": "🎉", "motivational": "💥", "cute": "🎊", "celebrate": "🍾"},
-    "grateful": {"default": "🙏", "funny": "🙇‍♂️", "sarcastic": "😏", "motivational": "🤝", "cute": "🦋", "appreciate": "🌻"},
-    "adventure": {"default": "🌍", "funny": "🚶‍♂️", "sarcastic": "🏞️", "motivational": "🗺️", "cute": "🎒", "exploring": "🌄"},
-    "travel": {"default": "✈️", "funny": "🚂", "sarcastic": "🛳️", "motivational": "🚗", "cute": "🏖️", "vacation": "🗺️"},
-    "nature": {"default": "🌿", "funny": "🍃", "sarcastic": "🌳", "motivational": "🌸", "cute": "🌺", "serene": "🌻"}
+    "sad": {"default": "😢", "funny": "😭", "sarcastic": "😑", "motivational": "😔", "cute": "😞", "excited": "😩"},
+    "love": {"default": "❤️", "funny": "💖", "sarcastic": "💘", "motivational": "💞", "cute": "😍", "excited": "😘"},
+    "angry": {"default": "😣", "funny": "🤬", "sarcastic": "😤", "motivational": "🔥", "cute": "😣", "excited": "😤"},
+    "excited": {"default": "😆", "funny": "😜", "sarcastic": "😏", "motivational": "🙌", "cute": "🤩", "excited": "🥳"},
+    "tired": {"default": "😩", "funny": "😴", "sarcastic": "😑", "motivational": "😓", "cute": "🥱", "excited": "🛌"},
+    "study": {"default": "📚", "funny": "👨‍💻", "sarcastic": "📝", "motivational": "📖", "cute": "📚", "excited": "💡"},
+    "exam": {"default": "📝", "funny": "🤯", "sarcastic": "😴", "motivational": "🎯", "cute": "📅", "excited": "😰"},
+    "free": {"default": "🎉", "funny": "🕺", "sarcastic": "😌", "motivational": "💃", "cute": "🎊", "excited": "🌞"},
+    "confused": {"default": "😕", "funny": "😵", "sarcastic": "🤷", "motivational": "🤔", "cute": "🙄", "excited": "🌀"},
+    "sleep": {"default": "😴", "funny": "💤", "sarcastic": "🛌", "motivational": "💭", "cute": "😪", "excited": "🌙"},
+    "bored": {"default": "🥱", "funny": "😑", "sarcastic": "🙃", "motivational": "🕰️", "cute": "🌀", "excited": "🛋️"},
+    "coffee": {"default": "☕", "funny": "🍵", "sarcastic": "🥤", "motivational": "🔥", "cute": "☕", "excited": "⚡"},
+    "food": {"default": "🍽️", "funny": "🍕", "sarcastic": "🍔", "motivational": "🥗", "cute": "🍰", "excited": "🍽️"},
+    "music": {"default": "🎶", "funny": "🎧", "sarcastic": "🎼", "motivational": "🎸", "cute": "🎤", "excited": "🔊"},
+    "dance": {"default": "💃", "funny": "🕺", "sarcastic": "🙆", "motivational": "🩰", "cute": "🕺", "excited": "💃"},
+    "assignment": {"default": "📄", "funny": "📝", "sarcastic": "🧾", "motivational": "🏆", "cute": "📚", "excited": "📚"},
+    "deadline": {"default": "⏰", "funny": "⌛", "sarcastic": "⏳", "motivational": "⏱️", "cute": "⏰", "excited": "⚡"},
+    "friends": {"default": "👯", "funny": "👯‍♂️", "sarcastic": "🤝", "motivational": "👬", "cute": "👭", "excited": "👯"},
+    "success": {"default": "🏆", "funny": "🎉", "sarcastic": "🥳", "motivational": "💯", "cute": "💎", "excited": "🥇"},
+    "thankful": {"default": "🙏", "funny": "🙌", "sarcastic": "😏", "motivational": "👏", "cute": "❤️", "excited": "🙏"},
+    "party": {"default": "🎉", "funny": "🎈", "sarcastic": "🥂", "motivational": "💥", "cute": "🎊", "excited": "🍾"},
+    "grateful": {"default": "🙏", "funny": "🙇", "sarcastic": "😉", "motivational": "🤝", "cute": "🦋", "excited": "🌟"},
+    "adventure": {"default": "🌍", "funny": "🚶", "sarcastic": "🏞️", "motivational": "🗺️", "cute": "🎒", "excited": "🌄"},
+    "travel": {"default": "✈️", "funny": "🚂", "sarcastic": "🛳️", "motivational": "🚗", "cute": "🏖️", "excited": "🗺️"},
+    "nature": {"default": "🌿", "funny": "🌴", "sarcastic": "🌳", "motivational": "🌸", "cute": "🌺", "excited": "🌻"}
 }
 
-# Function to clean text (remove punctuation, lowercase it)
-def clean_text(text):
-    text = text.lower()
-    return ''.join([char for char in text if char.isalnum() or char.isspace()])
-
-# Function to emojify text
 def emojify_text(text, mood="default"):
-    text = clean_text(text)
-    blob = TextBlob(text)
-    tokens = nltk.word_tokenize(text)
-    result = []
+    if not text or not isinstance(text, str):
+        return "No valid text provided"
+    
+    # Split text into sentences while preserving punctuation
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    result_sentences = []
 
-    for word in tokens:
-        clean = word.lower()
-        if clean in emoji_dict:
-            result.append(word + " " + emoji_dict[clean].get(mood, emoji_dict[clean]["default"]))
-        else:
-            result.append(word)
-
-    # Check sentiment and append emoji based on mood
-    sentiment = blob.sentiment.polarity
-    if sentiment > 0.3:
-        result.append(emoji_dict["happy"].get(mood, emoji_dict["happy"]["default"]))
-    elif sentiment < -0.3:
-        result.append(emoji_dict["sad"].get(mood, emoji_dict["sad"]["default"]))
-
-    return ' '.join(result)
-
-# Streamlit UI
-st.title("Emojify Me 2.0 - The Emoji Generator App")
-st.sidebar.header("Settings")
-
-# Mood selection
-mood = st.sidebar.selectbox("Select Mood:", ["default", "funny", "sarcastic", "motivational", "cute", "excited"])
-
-# User input options
-option = st.sidebar.radio("Select Option", ["Text Input", "File Upload"])
-
-if option == "Text Input":
-    # User types a sentence
-    input_text = st.text_area("Enter your text", "Type something here...")
-
-    if st.button("Emojify"):
-        emojified_text = emojify_text(input_text, mood=mood)
-        st.write("Emojified Text:")
-        st.write(emojified_text)
-
-elif option == "File Upload":
-    # File upload
-    uploaded_file = st.file_uploader("Choose a text file", type=["txt"])
-
-    if uploaded_file is not None:
-        text = uploaded_file.read().decode("utf-8")
-        if st.button("Emojify File"):
-            emojified_text = emojify_text(text, mood=mood)
-            st.write("Emojified Text:")
-            st.write(emojified_text)
+    for sentence in sentences:
+        if not sentence.strip():
+            continue
+            
+        # Tokenize while preserving punctuation
+        tokens = nltk.word_tokenize(sentence)
+        result_tokens = []
+        blob = TextBlob(sentence)
+        
+        for token in tokens:
+            # Check if token is a word (not punctuation)
+            if re.match(r'\w+', token.lower()):
+                clean = token.lower()
+                if clean in emoji_dict:
+                    emoji = emoji_dict[clean].get(mood, emoji_dict[clean]["default"])
+                    result_tokens.append(f"{token}{emoji}")
+                else:
+                    result_tokens.append(token)
+            else:
+                # Preserve punctuation
+                result_tokens.append(token)
+        
+        # Join tokens back into sentence
+        emojified_sentence = ' '.join(result_tokens)
+        
+        # Add sentiment-based emoji at sentence end
+        sentiment = blob.sentiment.polarity
+        if sentiment > 0.3:
+            emojified_sentence += f" {emoji_dict['happy'].get(mood, emoji_dict['happy']['default'])}"
+        elif sentiment < -0.3:
+            emojified_sentence += f" {emoji_dict['sad'].get(mood, emoji_dict['sad']['default'])}"
+            
+        result_sentences.append(emojified_sentence)
+    
+    # Join sentences with proper spacing
+    return '\n\n'.join(result_sentences)
