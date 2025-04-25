@@ -1,18 +1,25 @@
 import nltk
 from textblob import TextBlob
 import re
+import os
+
+# Set NLTK data path to a writable directory for Streamlit Cloud
+nltk_data_dir = os.path.join(os.getcwd(), "nltk_data")
+if not os.path.exists(nltk_data_dir):
+    os.makedirs(nltk_data_dir)
+nltk.data.path.append(nltk_data_dir)
 
 # Download required NLTK data
 try:
-    nltk.download("punkt", quiet=True)
-    nltk.download("averaged_perceptron_tagger", quiet=True)
+    nltk.download("punkt", download_dir=nltk_data_dir, quiet=True)
+    nltk.download("averaged_perceptron_tagger", download_dir=nltk_data_dir, quiet=True)
 except Exception as e:
     print(f"Error downloading NLTK data: {str(e)}")
 
 # Enhanced Emoji Dictionary with Synonyms
 emoji_dict = {
     "happy": {"default": " 😊", "funny": " 😂", "sarcastic": " 🙄", "motivational": " 💪", "cute": " 🥰", "excited": " 😆", "synonyms": ["joyful", "cheerful", "glad"]},
-    "sad": {"default": " 😢", "funny": " 😭", "sarcastic": " 😑", "motivational": " 😔", "cute": " 😞", "excited": " 😩", "synonyms": ["unhappy", "sorrowful", "down"]},
+    "sad": {"default": " 😢", "funny": " 😭", "srr": " 😑", "motivational": " 😔", "cute": " 😞", "excited": " 😩", "synonyms": ["unhappy", "sorrowful", "down"]},
     "love": {"default": " ❤️", "funny": " 💖", "sarcastic": " 💘", "motivational": " 💞", "cute": " 😍", "excited": " 😘", "synonyms": ["adore", "cherish", "affection"]},
     "angry": {"default": " 😣", "funny": " 🤬", "sarcastic": " 😤", "motivational": " 🔥", "cute": " 😣", "excited": " 😤", "synonyms": ["mad", "furious", "irritated"]},
     "excited": {"default": " 😆", "funny": " 😜", "sarcastic": " 😏", "motivational": " 🙌", "cute": " 🤩", "excited": " 🥳", "synonyms": ["thrilled", "eager", "enthusiastic"]},
