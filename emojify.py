@@ -47,19 +47,30 @@ emoji_dict = {
     "nature": {"default": " 🌿", "funny": " 🌴", "sarcastic": " 🌳", "motivational": " 🌸", "cute": " 🌺", "excited": " 🌻", "synonyms": ["outdoors", "wilderness", "scenery"]}
 }
 
-def emojify_text(text, mood="default", intensity=2, use_sentiment=True):
+def emojify_text(text, mood="default", intensity=2, use_sentiment=True, output_format="Paragraph"):
     if not text or not isinstance(text, str):
         return "No valid text provided"
     
-    # Use NLTK's sentence tokenizer and split on conjunctions like "but"
+    # Use NLTK's sentence tokenizer
     initial_sentences = nltk.sent_tokenize(text.strip())
     sentences = []
+    conjunctions = []
+    
+    # Split on conjunctions like "but" and preserve them
     for sent in initial_sentences:
-        # Split on "but" and commas for finer granularity
-        split_sentences = re.split(r'\s*(?:but|and|,)\s*', sent)
-        sentences.extend([s.strip() for s in split_sentences if s.strip()])
+        # Capture conjunctions and split sentences
+        parts = re.split(r'\s*(but|and|,)\s*', sent, flags=re.IGNORECASE)
+        for i, part in enumerate(parts):
+            part = part.strip()
+            if part.lower() in ['but', 'and', ',']:
+                conjunctions.append(part)
+            elif part:
+                sentences.append(part)
+                if i < len(parts) - 1 and parts[i + 1].lower() not in ['but', 'and', ',']:
+                    conjunctions.append('')
     
     print(f"Split Sentences: {sentences}")
+    print(f"Conjunctions: {conjunctions}")
     result_sentences = []
     
     # Expanded list of negative words
@@ -149,12 +160,12 @@ def emojify_text(text, mood="default", intensity=2, use_sentiment=True):
             
             # Force positive sentiment if positive words are present and sentiment is neutral or slightly positive
             if any(word.lower() in sentence.lower() for word in positive_words) and sentiment >= 0.5:
-                sentiment = max(sentiment, 0.6)  # Bump to ensure positive emoji
+                sentiment = max(sentiment, 0.6)
             
             # Debug print for sentiment analysis
             print(f"Sentence: {sentence}, Negative Words: {[word for word in negative_words if word.lower() in sentence.lower()]}, Positive Words: {[word for word in positive_words if word.lower() in sentence.lower()]}, Has Negation: {has_negation}, Double Negation: {is_double_negation}, Sentiment: {sentiment}")
             
-            if sentiment > 0.5:  # Keep strict positive threshold
+            if sentiment > 0.5:
                 emojified_sentence += emoji_dict['happy'].get(mood, emoji_dict['happy']['default'])
             elif sentiment < -0.01:
                 emojified_sentence += emoji_dict['sad'].get(mood, emoji_dict['sad']['default'])
@@ -163,5 +174,21 @@ def emojify_text(text, mood="default", intensity=2, use_sentiment=True):
             
         result_sentences.append(emojified_sentence)
     
-    # Join sentences with proper spacing
-    return '\n\n'.join(result_sentences)
+    # Join sentences based on output format
+    if output_format == "Paragraph":
+        # Reconstruct with original conjunctions
+        if len(result_sentences) == 1:
+            return result_sentences[0]
+        output = result_sentences[0]
+        for i, sentence in enumerate(result_sentences[1:], 1):
+            conj = conjunctions[i - 1] if i - 1 < len(conjunctions) else ''
+            if conj == ',':
+                output += f", {sentence}"
+            elif conj:
+                output += f" {conj} {sentence}"
+            else:
+                output += f" {sentence}"
+        return output
+    else:
+        # Preserve newlines for List format
+        return '\n\n'.join(result_sentences)

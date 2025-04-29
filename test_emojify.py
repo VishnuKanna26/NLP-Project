@@ -85,7 +85,6 @@ class TestEmojifyText(unittest.TestCase):
         result = emojify_text(input_text, mood="funny", intensity=2, use_sentiment=True)
         self.assertNotIn("😭", result, "Double negation should not include sad emoji")
 
-    # New tests for default mood
     def test_positive_sentiment_default(self):
         input_text = "I am very happy today!"
         result = emojify_text(input_text, mood="default", intensity=2, use_sentiment=True)
@@ -104,10 +103,9 @@ class TestEmojifyText(unittest.TestCase):
         self.assertIn("😊", result, "Complex sentence should include happy emoji for positive part")
         self.assertIn("😢", result, "Complex sentence should include sad emoji for negative part")
 
-    # New tests for motivational mood
     def test_positive_sentiment_motivational(self):
         input_text = "I am very happy today!"
-        result = emojify_text(input_text, mood="motivational", intensity=2, use_sentiment=True)
+        result = Emojify_text(input_text, mood="motivational", intensity=2, use_sentiment=True)
         self.assertIn("💪", result, "Positive sentiment should include happy emoji (motivational mood)")
         self.assertNotIn("😔", result, "Positive sentiment should not include sad emoji")
 
@@ -123,7 +121,6 @@ class TestEmojifyText(unittest.TestCase):
         self.assertIn("💪", result, "Complex sentence should include happy emoji for positive part")
         self.assertIn("😔", result, "Complex sentence should include sad emoji for negative part")
 
-    # New tests for excited mood
     def test_positive_sentiment_excited(self):
         input_text = "I am very happy today!"
         result = emojify_text(input_text, mood="excited", intensity=2, use_sentiment=True)
@@ -141,6 +138,32 @@ class TestEmojifyText(unittest.TestCase):
         result = emojify_text(input_text, mood="excited", intensity=2, use_sentiment=True)
         self.assertIn("😆", result, "Complex sentence should include happy emoji for positive part")
         self.assertIn("😩", result, "Complex sentence should include sad emoji for negative part")
+
+    # New tests for sentence formation
+    def test_conjunction_formatting_cute(self):
+        input_text = "i am not in a good mood today but I will come"
+        result = emojify_text(input_text, mood="cute", intensity=2, use_sentiment=True, output_format="Paragraph")
+        self.assertIn("😞", result, "Negative sentiment should include sad emoji")
+        self.assertNotIn("\n", result, "Paragraph format should not include newlines")
+        self.assertTrue(result.startswith("i am not in a good mood today 😞 but I will come"), 
+                        f"Expected single-line output, got: {result}")
+
+    def test_conjunction_formatting_default(self):
+        input_text = "I love dancing, but my feet hurt"
+        result = emojify_text(input_text, mood="default", intensity=2, use_sentiment=True, output_format="Paragraph")
+        self.assertIn("😊", result, "Positive sentiment should include happy emoji")
+        self.assertIn("😢", result, "Negative sentiment should include sad emoji")
+        self.assertNotIn("\n", result, "Paragraph format should not include newlines")
+        self.assertTrue(result.startswith("I love ❤️ dancing 😊, but my feet hurt 😢"), 
+                        f"Expected single-line output, got: {result}")
+
+    def test_list_format_cute(self):
+        input_text = "i am not in a good mood today but I will come"
+        result = emojify_text(input_text, mood="cute", intensity=2, use_sentiment=True, output_format="List")
+        self.assertIn("😞", result, "Negative sentiment should include sad emoji")
+        self.assertIn("\n\n", result, "List format should include newlines")
+        expected = "i am not in a good mood today 😞\n\nI will come"
+        self.assertEqual(result, expected, f"Expected list format, got: {result}")
 
 if __name__ == '__main__':
     unittest.main()
