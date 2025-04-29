@@ -51,13 +51,30 @@ def emojify_text(text, mood="default", intensity=2, use_sentiment=True):
     if not text or not isinstance(text, str):
         return "No valid text provided"
     
-    # Split text into sentences while preserving punctuation
-    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    # Use NLTK's sentence tokenizer and split on conjunctions like "but"
+    initial_sentences = nltk.sent_tokenize(text.strip())
+    sentences = []
+    for sent in initial_sentences:
+        # Split on "but" and commas for finer granularity
+        split_sentences = re.split(r'\s*(?:but|and|,)\s*', sent)
+        sentences.extend([s.strip() for s in split_sentences if s.strip()])
+    
+    print(f"Split Sentences: {sentences}")
     result_sentences = []
     
-    # Compute paragraph-level sentiment
-    paragraph_blob = TextBlob(text)
-    paragraph_sentiment = paragraph_blob.sentiment.polarity
+    # Expanded list of negative words
+    negative_words = [
+        'stressful', 'bad', 'sad', 'terrible', 'awful', 'horrible', 'tired',
+        'exhausted', 'angry', 'frustrated', 'confusing', 'hurt', 'painful',
+        'difficult', 'tough', 'annoying', 'boring', 'disappointing'
+    ]
+    
+    # List of positive words to force positive sentiment
+    positive_words = [
+        'happy', 'love', 'excited', 'free', 'success', 'thankful', 'grateful',
+        'party', 'joyful', 'cheerful', 'glad', 'adore', 'cherish', 'affection',
+        'thrilled', 'eager', 'enthusiastic'
+    ]
     
     for sentence in sentences:
         if not sentence.strip():
@@ -69,6 +86,19 @@ def emojify_text(text, mood="default", intensity=2, use_sentiment=True):
         result_tokens = []
         blob = TextBlob(sentence)
         emoji_count = 0
+        
+        # Negation detection for the sentence
+        negation_words = ['not', "n't", 'never', 'no']
+        has_negation = any(word.lower() in sentence.lower() for word in negation_words)
+        
+        # Check for double negation (e.g., "not unhappy")
+        is_double_negation = False
+        for i, token in enumerate(tokens):
+            if token.lower() in negation_words and i + 1 < len(tokens):
+                next_token = tokens[i + 1].lower()
+                if next_token.startswith('un') and next_token in ['unhappy', 'unpleasant', 'unsatisfied']:
+                    is_double_negation = True
+                    break
         
         for token, pos in pos_tags:
             # Only add emojis for nouns (NN*), verbs (VB*), and adjectives (JJ*)
@@ -82,14 +112,21 @@ def emojify_text(text, mood="default", intensity=2, use_sentiment=True):
                         matched_key = key
                         break
                 
+                # Skip positive emojis if single negation and positive key
+                # Skip negative emojis if double negation and negative key
                 if matched_key in emoji_dict and (emoji_count < intensity or intensity == 3):
-                    emoji = emoji_dict[matched_key].get(mood, emoji_dict[matched_key]["default"])
-                    result_tokens.append(f"{token}{emoji}")
-                    emoji_count += 1
+                    if has_negation and not is_double_negation and matched_key in ['happy', 'love', 'excited', 'free', 'success', 'thankful', 'grateful', 'party']:
+                        result_tokens.append(token)
+                    elif is_double_negation and matched_key in ['sad', 'angry', 'tired', 'bored', 'confused']:
+                        result_tokens.append(token)
+                    else:
+                        emoji = emoji_dict[matched_key].get(mood, emoji_dict[matched_key]["default"])
+                        result_tokens.append(f"{token}{emoji}")
+                        emoji_count += 1
+                        print(f"Word-Level: Token: {token}, Matched Key: {matched_key}, Emoji: {emoji}, Double Negation: {is_double_negation}")
                 else:
                     result_tokens.append(token)
             else:
-                # Preserve punctuation and other tokens
                 result_tokens.append(token)
         
         # Join tokens back into sentence
@@ -98,16 +135,31 @@ def emojify_text(text, mood="default", intensity=2, use_sentiment=True):
         # Add sentiment-based emoji if enabled and within intensity limit
         if use_sentiment and emoji_count < intensity:
             sentiment = blob.sentiment.polarity
-            # Adjust sentiment based on paragraph context
-            if paragraph_sentiment < -0.2 and sentiment > 0:
-                sentiment = -0.1  # Tone down positive sentiment in negative context
-            elif paragraph_sentiment > 0.2 and sentiment < 0:
-                sentiment = 0.1   # Tone down negative sentiment in positive context
-                
-            if sentiment > 0.3:
+            
+            # Handle double negation
+            if is_double_negation and sentiment < 0:
+                sentiment = -sentiment
+            # Handle single negation
+            elif has_negation and not is_double_negation and sentiment > 0:
+                sentiment = -sentiment
+            
+            # Force negative sentiment if negative words are present
+            if any(word.lower() in sentence.lower() for word in negative_words):
+                sentiment = min(sentiment, -0.3)
+            
+            # Force positive sentiment if positive words are present and sentiment is neutral or slightly positive
+            if any(word.lower() in sentence.lower() for word in positive_words) and sentiment >= 0.5:
+                sentiment = max(sentiment, 0.6)  # Bump to ensure positive emoji
+            
+            # Debug print for sentiment analysis
+            print(f"Sentence: {sentence}, Negative Words: {[word for word in negative_words if word.lower() in sentence.lower()]}, Positive Words: {[word for word in positive_words if word.lower() in sentence.lower()]}, Has Negation: {has_negation}, Double Negation: {is_double_negation}, Sentiment: {sentiment}")
+            
+            if sentiment > 0.5:  # Keep strict positive threshold
                 emojified_sentence += emoji_dict['happy'].get(mood, emoji_dict['happy']['default'])
-            elif sentiment < -0.3:
+            elif sentiment < -0.01:
                 emojified_sentence += emoji_dict['sad'].get(mood, emoji_dict['sad']['default'])
+            else:
+                print(f"Neutral sentiment skipped: {sentiment}")
             
         result_sentences.append(emojified_sentence)
     

@@ -2,20 +2,16 @@ import streamlit as st
 from emojify import emojify_text
 import re
 
-# Set page config
 st.set_page_config(page_title="Emojify Me 2.0", page_icon="😊", layout="wide")
 
-# Initialize session state for input history
 if "input_history" not in st.session_state:
     st.session_state.input_history = []
 if "current_input" not in st.session_state:
     st.session_state.current_input = ""
 
-# Set title and header
 st.title("Emojify Me 2.0 - Context-Aware Emoji Bot")
 st.markdown("Transform your text with mood-based emojis! 🎉")
 
-# Sidebar settings
 with st.sidebar:
     st.header("Settings")
     mood = st.selectbox("Select Mood:", ["default", "funny", "sarcastic", "motivational", "cute", "excited"])
@@ -23,7 +19,8 @@ with st.sidebar:
     output_format = st.selectbox("Output Format:", ["Paragraph", "Bulleted List", "Highlighted Emojis"])
     use_sentiment_emoji = st.checkbox("Add Sentiment Emojis", value=True)
 
-# Main content
+
+
 if st.session_state.current_input:
     st.text_area("Current Input", value=st.session_state.current_input, key="current_input_display", disabled=True)
 
@@ -89,7 +86,10 @@ elif option == "File Upload":
         except Exception as e:
             st.error(f"Error processing file: {str(e)}")
 
-# Display emojified result
+
+
+
+
 if "emojified_result" in st.session_state and st.session_state.emojified_result:
     st.subheader("Emojified Result:")
     if st.session_state.output_format == "Bulleted List":
@@ -101,7 +101,7 @@ if "emojified_result" in st.session_state and st.session_state.emojified_result:
     else:
         st.markdown(st.session_state.emojified_result)
     
-    # Download button for result
+
     st.download_button(
         label="Download Result",
         data=st.session_state.emojified_result,
